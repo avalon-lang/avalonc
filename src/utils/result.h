@@ -35,7 +35,12 @@ struct Result {
     void * data;
 };
 
-inline struct Result createResult(enum ResultType type, void * data);
+inline struct Result createResult(enum ResultType type, void * data) {
+    struct Result result;
+    result.type = type;
+    result.data = data;
+    return result;
+}
 
 
 /**
@@ -62,6 +67,15 @@ struct Error {
     char * message;
 };
 
-inline struct Error createError(enum ErrorType type, char * file, int line, int column, int lexeme_length, char * message);
+inline struct Error createError(enum ErrorType type, char * file, int line, int column, int lexeme_length, char * message) {
+    struct Error error;
+    error.type = type;
+    error.file = file;
+    error.line = line;
+    error.column = column;
+    error.lexeme_length = lexeme_length;
+    error.message = message;
+    return error;
+}
 
 #endif
