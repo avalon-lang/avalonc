@@ -6,7 +6,7 @@
 # :email    ntwali.bashige@gmail.com
 #
 
-CC          := GCC
+CC          := gcc
 CFLAGS      := -std=c11 -g -Wall -Wextra -pedantic -DDEBUG
 SRC_DIR     := src
 INC         := -Isrc
