@@ -38,3 +38,7 @@ setup:
 clean:
 	@find . -exec touch {} \;
 	@rm -rf $(BUILD_DIR) $(BIN_DIR)
+
+.PHONY: grind
+grind:
+	@valgrind --leak-check=full --leak-resolution=high --track-origins=yes $(TARGET)
