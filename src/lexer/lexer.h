@@ -46,8 +46,7 @@ struct Lexer {
      *
      * first_indentation_found      : signals whether we have our first indentation.
      * is_first_indentation_space   : signals whehter the first indentation found is a space or a tab.
-     * indentation_count            : this allows us to maintain indentation discipline by requiring that all indentations be multiples of the first indentation.
-     * indentation_count_line       : for error reporting purposes, we keep track of the line where the first indentation was found. This is so we can let users know how many spaces (tabs) their first indentation is made of.
+     * first_indentation_line       : for error reporting purposes, we keep track of the line where the first indentation was found. This is so we can let users know how many spaces (tabs) their first indentation is made of.
      */
     bool first_indentation_found;
     bool is_first_indentation_space;

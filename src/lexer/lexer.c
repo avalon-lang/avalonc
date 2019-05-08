@@ -26,8 +26,7 @@
 #include "lexer/lexer.h"
 
 
-static struct Token handleSpace(struct Lexer * const lexer);
-static struct Token handleTabulation(struct Lexer * const lexer);
+static struct Token handleWhitespace(struct Lexer * const lexer, bool is_space);
 static void skipWhitespace(struct Lexer * const lexer);
 static bool isAtEnd(struct Lexer * const lexer);
 static char advance(struct Lexer * const lexer);
@@ -191,10 +190,10 @@ struct Token lexToken(struct Lexer * const lexer) {
             return makeToken(lexer, AVL_NEWLINE);
 
         case '\t':
-            return handleTabulation(lexer);
+            return handleWhitespace(lexer, false);
 
         case ' ':
-            return handleSpace(lexer);
+            return handleWhitespace(lexer, true);
 
         default:
             ;
@@ -205,129 +204,78 @@ struct Token lexToken(struct Lexer * const lexer) {
 
 
 /**
- * When we accounter a blank space, we need to figure out whether to emit an INDENT token or a DEDENT token.
+ * Handle blank spaces and tabulations where they are significant.
  *
  * @param       lexer pointer to the lexer.
+ * @param       is_space true if we have space, false if we have tabulations.
  *
- * @return      an INDENT or a DEDENT token.
+ * @return      an INDENT or DEDENT token.
  */
-static struct Token handleSpace(struct Lexer * const lexer) {
-    // If we are allowed to ignore whitespace then we cannot handle blank spaces here
-    if (lexer -> ignore_whitespace == true)
-        return errorToken(lexer, "Unexpected blank space.");
-
-    // Now we don't consider the previous line to be terminated by a new line
-    lexer -> ignore_whitespace = true;
-
-    // If the first indentation was already found and it is not a space (but a tabulation), we have an error
-    if (lexer -> first_indentation_found && lexer -> is_first_indentation_space == false)
-        return errorToken(lexer, "Indentation using tabulation is already is effect hence blank space cannot be used for the same.");
-
-    // We read all the blank spaces we can find and count how many there are.
-    // This counting serves two purposes: if we have the first indentation, it gives the number that represents the divisor of all future indentation spaces.
-    // Second, it tells us if we need to emit a DEDENT or INDENT token.
-    size_t spaces_count = 0;
-    for (;;) {
-        char c = peek(lexer);
-        if (c == ' ') {
-            advance(lexer);
-            spaces_count++;
-        }
-    }
-
-    // Figure out if this is the first indentation and if not then this is our first indentation
-    if (lexer -> first_indentation_found == false) {
-        lexer -> first_indentation_found = true;
-        lexer -> is_first_indentation_space = true;
-        lexer -> last_indentation_count = spaces_count;
-        lexer -> first_indentation_line = lexer -> line;
-
-        lexer -> last_indentation_count = spaces_count;
-        return makeToken(lexer, AVL_INDENT);
-    }
-    // If this is not our first indentation, we make sure that the number of spaces matched is a multiple of the number of spaces matched for the first indentation
-    else  {
-        if (spaces_count % lexer -> last_indentation_count != 0)
-            return errorToken(lexer, "Expected a valid indentation: the number of spaces that form a valid indentation must be a multiple of the number of spaces that form the first indentation.");
-
-        // We figure out if we must emit a INDENT or DEDENT token
-        // If the number of spaces found is equal to the number of spaces of the last indentation (dedentation), we emit an INDENT token
-        if (spaces_count == lexer -> last_indentation_count) {
-            return makeToken(lexer, AVL_INDENT);
-        }
-        // If the number of spaces found is greater than the number of spaces of the last indentation (dedentation), we emit an INDENT token
-        else if (spaces_count > lexer -> last_indentation_count) {
-            lexer -> last_indentation_count = spaces_count;
-            return makeToken(lexer, AVL_INDENT);
-        }
-        // If the number of spaces found is less thank the number of spaces of the last indentation (dedentation), we emit a DEDENT token
-        else {
-            lexer -> last_indentation_count = spaces_count;
-            return makeToken(lexer, AVL_DEDENT);
-        }
-    }
-}
-
-
-/**
- * When we accounter a tabulation, we need to figure out whether to emit an INDENT token or a DEDENT token.
- *
- * @param       lexer pointer to the lexer.
- *
- * @return      an INDENT or a DEDENT token.
- */
-static struct Token handleTabulation(struct Lexer * const lexer) {
+static struct Token handleWhitespace(struct Lexer * const lexer, bool is_space) {
     // If we are allowed to ignore whitespace then we cannot handle tabulations here
     if (lexer -> ignore_whitespace == true)
-        return errorToken(lexer, "Unexpected tabulation.");
+        return errorToken(lexer, is_space ? "Unexpected blank space." : "Unexpected tabulation.");
 
     // Now we don't consider the previous line to be terminated by a new line
     lexer -> ignore_whitespace = true;
 
-    // If the first indentation was already found and it is a space (but not a tabulation), we have an error
-    if (lexer -> first_indentation_found && lexer -> is_first_indentation_space == true)
-        return errorToken(lexer, "Indentation using blank spaces is already is effect hence tabulation cannot be used for the same.");
+    // If the first indentation was already found and it is a space (or a tabulation), we have an error
+    if (lexer -> first_indentation_found) {
+        if (is_space == true && lexer -> is_first_indentation_space == false)
+            return errorToken(lexer, "Indentation using tabulation is already is effect hence blank space cannot be used for the same.");
+        else if (is_space == false && lexer -> is_first_indentation_space == true)
+            return errorToken(lexer, "Indentation using blank spaces is already is effect hence tabulation cannot be used for the same.");
+    }
 
-    // We read all the tabulations we can find and count how many there are.
+    // We read all the blank spaces (tabulations) we can find and count how many there are.
     // This counting serves two purposes: if we have the first indentation, it gives the number that represents the divisor of all future indentation spaces.
     // Second, it tells us if we need to emit a DEDENT or INDENT token.
-    size_t tabs_count = 0;
-    for (;;) {
-        char c = peek(lexer);
-        if (c == '\t') {
+    size_t whitespace_count = 0;
+    if (is_space) {
+        while (peek(lexer) == ' ') {
             advance(lexer);
-            tabs_count++;
+            whitespace_count++;
+        }
+    }
+    else {
+        while (peek(lexer) == '\t') {
+            advance(lexer);
+            whitespace_count++;
         }
     }
 
     // Figure out if this is the first indentation and if not then this is our first indentation
     if (lexer -> first_indentation_found == false) {
         lexer -> first_indentation_found = true;
-        lexer -> is_first_indentation_space = false;
-        lexer -> last_indentation_count = tabs_count;
+        lexer -> is_first_indentation_space = is_space;
+        lexer -> last_indentation_count = whitespace_count;
         lexer -> first_indentation_line = lexer -> line;
 
-        lexer -> last_indentation_count = tabs_count;
+        lexer -> last_indentation_count = whitespace_count;
         return makeToken(lexer, AVL_INDENT);
     }
-    // If this is not our first indentation, we make sure that the number of tabulations matched is a multiple of the number of tabulations matched for the first indentation
+    // If this is not our first indentation, we make sure that the number of blank spaces (tabulations) matched is a multiple of the number of blank spaces (tabulations) matched for the first indentation
     else  {
-        if (tabs_count % lexer -> last_indentation_count != 0)
-            return errorToken(lexer, "Expected a valid indentation: the number of tabulations that form a valid indentation must be a multiple of the number of tabulations that form the first indentation.");
+        if (whitespace_count % lexer -> last_indentation_count != 0) {
+            if (is_space)
+                return errorToken(lexer, "Expected a valid indentation: the number of spaces that form a valid indentation must be a multiple of the number of spaces that form the first indentation.");
+            else
+                return errorToken(lexer, "Expected a valid indentation: the number of tabulations that form a valid indentation must be a multiple of the number of tabulations that form the first indentation.");
+        }
 
         // We figure out if we must emit a INDENT or DEDENT token
-        // If the number of tabulations found is equal to the number of tabulations of the last indentation (dedentation), we emit an INDENT token
-        if (tabs_count == lexer -> last_indentation_count) {
+        // If the number of blank spaces (tabulations) found is equal to the number of blank spaces (tabulations) of the last indentation (dedentation), we emit an INDENT token
+        if (whitespace_count == lexer -> last_indentation_count) {
             return makeToken(lexer, AVL_INDENT);
         }
-        // If the number of tabulations found is greater than the number of tabulations of the last indentation (dedentation), we emit an INDENT token
-        else if (tabs_count > lexer -> last_indentation_count) {
-            lexer -> last_indentation_count = tabs_count;
+        // If the number of blank spaces (tabulations) found is greater than the number of blank spaces (tabulations) of the last indentation (dedentation), we emit an INDENT token
+        else if (whitespace_count > lexer -> last_indentation_count) {
+            lexer -> last_indentation_count = whitespace_count;
             return makeToken(lexer, AVL_INDENT);
         }
-        // If the number of tabulations found is less thank the number of tabulations of the last indentation (dedentation), we emit a DEDENT token
+        // If the number of blank spaces (tabulations) found is less thank the number of blank spaces (tabulations) of the last indentation (dedentation), we emit a DEDENT token
         else {
-            lexer -> last_indentation_count = tabs_count;
+            lexer -> last_indentation_count = whitespace_count;
             return makeToken(lexer, AVL_DEDENT);
         }
     }
