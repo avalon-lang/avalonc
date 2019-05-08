@@ -23,7 +23,6 @@
 
 #include "common/token_type.h"
 #include "common/token.h"
-#include "utils/stack.h"
 
 
 struct Lexer {
@@ -35,51 +34,29 @@ struct Lexer {
 
     /* The following members help us keep track of spaces since whitespace is significant in Avalon */
 
-    /* Indentation tracking
-     * Let's us kow well indented the source code is and if we should ignore any found indentation.
-     * Keeps track of how deeply nested the current line(block) is from the start of the line.
+    /* Indentation tracking.
+     * This flag allows to know if we can ignore whitespace.
+     * We use this knowledge to figure out when we need to emit INDENT and DEDENT tokens.
      */
-    struct SizeTStack * indentation_stack;
-
-    /* Since indentation is ignored within parenthesis, braces and brackets;
-     * we must keep track of how deep within said braces we are so we can know when to re-enable indentation.
-     *
-     * parens_levels                : how deep we are within parentheses.
-     * braces_levels                : how deep we are within curly braces.
-     * brackets_levels              : how deep we are within square braces.
-     */
-    size_t parens_levels;
-    size_t braces_levels;
-    size_t brackets_levels;
-
-    /* We dinstinguish between logical lines and physical lines.
-     * A line that ends with a backlash (and not within a character or a string)
-     * is considered to signal the end of a phyical line but to be part of a single
-     * logical line that starts on the next physical line.
-     *
-     * So we must know whether we have a new logical line in order to know if a new line is significant.
-     * 
-     * is_new_logical_line          : a flag that indicates whether we have a new logical line
-     * in_new_logical_line          : a flag that indicates wheter we are currently lexing a single logical like that may be spread over multiple physical lines.
-     * ignore_new_line              : when we meet a new line, this flag is set to true if we intend to mark the coming line as part of a single logical line
-     */
-    bool is_new_logical_line;
-    bool in_new_logical_line;
-    bool ignore_new_line;
+    bool ignore_whitespace;
 
     /* We do not allow indentation to at the very beginning of the source code.
      * We also require that all indentations found in the source file be a multiple of the very first indentation found.
      * Also, since spaces or tabs can be used for indentation, we require that only one of them be used throughout a source.
      *
-     * is_first_indentation         : signals whether we have our first indentation.
+     * first_indentation_found      : signals whether we have our first indentation.
      * is_first_indentation_space   : signals whehter the first indentation found is a space or a tab.
-     * indentation_space_count      : tabs are transformed into logical spaces. Spaces remain as such. Either way, we must know the number of empty spaces used at the first indentation so we can enforce the multiplicity rule.
-     * indentation_space_count_line : for error reporting purposes, we keep track of the line where the first indentation was found. This is so we can let users know how many spaces (tabs) their first indentation is made of.
+     * indentation_count            : this allows us to maintain indentation discipline by requiring that all indentations be multiples of the first indentation.
+     * indentation_count_line       : for error reporting purposes, we keep track of the line where the first indentation was found. This is so we can let users know how many spaces (tabs) their first indentation is made of.
      */
-    bool is_first_indentation;
+    bool first_indentation_found;
     bool is_first_indentation_space;
-    size_t indentation_space_count;
-    size_t indentation_space_count_line;
+    size_t first_indentation_line;
+
+    /* Indentation tracking
+     * This helps determine if we should emit an INDENT token or a DEDENT token.
+     */
+    size_t last_indentation_count;
 };
 
 
