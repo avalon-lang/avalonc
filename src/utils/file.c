@@ -22,12 +22,11 @@
 #include <stdio.h>
 
 #include "utils/file.h"
-#include "utils/result.h"
 
 /**
  * Verify if a file exists given the path to the file. Returns true if it does, false otherwise.
  */
-bool fileExists(const char * path) {
+bool fileExists(char const * path) {
     FILE * file = fopen(path, "rb");
     if (file == NULL) {
         return false;
@@ -42,36 +41,34 @@ bool fileExists(const char * path) {
 /**
  * Reads the content of the file at the given path and returns a pointer to said content.
  */
-struct Result readFile(const char * path) {
+char * readFile(char const * path) {
     FILE * file = fopen(path, "rb");
-    struct Result result;
-
-    if (file == NULL) {
-        char * error = malloc(24 + strlen(path));
-
-        // If we run out of heap memory, we rely of fprintf to display the error without attempting further heap allocation
-        if (error == NULL) {
-            fprintf(stderr, "Ran out of memory while trying to read the file <%s>.\n", path);
-            result = createResult(GENERIC_ERROR, NULL);
-        }
-        // If we failed to find the file, we leave it to the caller to decide how to display the error
-        else {
-            sprintf(error, "Failed to open file <%s>.", path);
-            result = createResult(GENERIC_ERROR, error);
-        }
-    }
-    else {
-        fseek(file, 0L, SEEK_END);
-        size_t file_size = ftell(file);
-        rewind(file);
-
-        char * buffer = malloc(file_size + 1);                    
-        size_t bytes_read = fread(buffer, sizeof(char), file_size, file);
-        buffer[bytes_read] = '\0';
-
-        result = createResult(PCHAR_VALUE, (void *)buffer);
-        fclose(file);
-    }
     
-    return result;
+    // We could not open the file
+    if (file == NULL) {
+        fprintf(stderr, "Failed to open file <%s>.", path);
+        exit(74);
+    }
+
+    // Get the file size
+    fseek(file, 0L, SEEK_END);
+    size_t file_size = ftell(file);
+    rewind(file);
+
+    // Attempt to allocate enough memory to hold the file content
+    char * buffer = malloc(file_size + 1);  
+    if (buffer == NULL)                   {
+        fprintf(stderr, "Failed to allocate enough memory to hold the file at <%s>.", path);
+        exit(74);
+    }
+
+    // Place the file content into the buffer
+    size_t bytes_read = fread(buffer, sizeof(char), file_size, file);
+    if (bytes_read < file_size) {
+        fprintf(stderr, "Could not read the content of the file at <%s>.\n", path);
+        exit(74);
+    }
+    buffer[bytes_read] = '\0';
+    fclose(file);
+    return buffer;
 }

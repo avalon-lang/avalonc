@@ -16,12 +16,15 @@
  */
 
 
+#include <stddef.h>
+#include <stdlib.h>
 #include <stdio.h>
 
 #include "utils/file.h"
+#include "lexer/lexer.h"
 
 
-void compile(const char * source_path);
+void compile(char const * source_path);
 
 
 int main(int argc, char * argv[])
@@ -41,10 +44,12 @@ int main(int argc, char * argv[])
     return 0;
 }
 
-void compile(const char * source_path) {
-    /* We given by making sure the given source path exists */
-    if (fileExists(source_path) == false)
+void compile(char const * source_path) {
+    /* We begin by making sure the given source path exists */
+    if (fileExists(source_path) == false) {
         fprintf(stderr, "File <%s> was not found.\n", source_path);
+        return;
+    }
 
     /* 1. Configure the compiler */
     // Add the current directory to the search path
@@ -56,4 +61,24 @@ void compile(const char * source_path) {
     // Add the AVALON_PATH directories to the search path
 
     /* 2. Invoke the compiler */
+    char * source = readFile(source_path);
+    printf("%s\n", source);
+
+    struct Lexer * lexer = newLexer(source_path, source);
+    int line = -1;
+    for (;;) {
+        struct Token token = lexToken(lexer);
+        if ((int) token.line != line) {
+            printf("%4d ", (int) token.line);
+            line = (int) token.line;
+        } else {
+            printf("   | ");
+        }
+        printf("%2d '%.*s'\n", token.type, (int) token.length, token.start);
+
+        if (token.type == AVL_EOF) break;
+    }
+
+    free(source);
+    deleteLexer(& lexer);
 }

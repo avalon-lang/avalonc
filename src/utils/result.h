@@ -18,6 +18,8 @@
 #ifndef UTILS_RESULT_H
 #define UTILS_RESULT_H
 
+#include "common/token.h"
+
 /**
  * Type of pointer in the returned result.
  */
@@ -60,20 +62,14 @@ enum ErrorType {
  */
 struct Error {
     enum ErrorType type;
-    char * file;
-    int line;
-    int column;
-    int lexeme_length;
-    char * message;
+    struct Token token;
+    const char * message;
 };
 
-inline struct Error createError(enum ErrorType type, char * file, int line, int column, int lexeme_length, char * message) {
+inline struct Error createError(enum ErrorType type, struct Token token, char * message) {
     struct Error error;
     error.type = type;
-    error.file = file;
-    error.line = line;
-    error.column = column;
-    error.lexeme_length = lexeme_length;
+    error.token = token;
     error.message = message;
     return error;
 }

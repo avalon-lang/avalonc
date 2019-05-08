@@ -20,17 +20,16 @@
 
 #include <stdbool.h>
 
-#include "utils/result.h"
 
 /**
  * Verify if a file exists given the path to the file. Returns true if it does, false otherwise.
  */
-bool fileExists(const char * path);
+bool fileExists(char const * path);
 
 
 /**
  * Reads the content of the file at the given path and returns a pointer to said content.
  */
-struct Result readFile(const char * path);
+char * readFile(char const * path);
 
 #endif

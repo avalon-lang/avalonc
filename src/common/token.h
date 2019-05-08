@@ -15,11 +15,21 @@
  *  limitations under the License.
  */
 
-#include <utils/result.h>
+#ifndef COMMON_TOKEN_H
+#define COMMON_TOKEN_H
 
-#include "common/token.h"
+#include <stddef.h>
+
+#include "common/token_type.h"
 
 
-extern inline struct Result createResult(enum ResultType type, void * data);
+struct Token {
+    enum TokenType type;
+    char const * file;
+    char const * start;
+    size_t length;
+    size_t line;
+    size_t column;
+};
 
-extern inline struct Error createError(enum ErrorType type, struct Token token, char * message);
+#endif
