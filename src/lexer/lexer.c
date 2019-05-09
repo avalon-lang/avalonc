@@ -233,26 +233,26 @@ struct Token lexToken(struct Lexer * const lexer) {
  * @return      the token representing the appropriate number
  */
 static struct Token number(struct Lexer * const lexer) {
-    bool is_classical = false;
+    bool is_classical = true;
     bool is_decimal = false;
 
-    // We expect the first character in the stream to be zero to indicate the type of number we are dealing (classical or quantum)
-    if (peekBack(lexer) != '0')
-        return errorToken(lexer, "Expected <0> before <c> or <q> to indicate the type of data which can be classical or quantum respectively.");
+    // if the type of data was specified, we watch out for quantum data as classical is already the default
+    if (peekBack(lexer) == '0' && (peek(lexer) == 'c' || peek(lexer) == 'q')) {
+        if (peek(lexer) == 'c')
+            is_classical = true;
+        else if(peek(lexer) == 'q')
+            is_classical = false;
 
-    // We expect the next character in the stream to be <c> or <q> to indicate whether we have classical data or quantum data
-    if (peek(lexer) == 'c')
-        is_classical = true;
-    else if(peek(lexer) == 'q')
-        is_classical = false;
-    else
+        // We consume the data type identifier
+        advance(lexer);
+    }
+    // If we do have 0 but the peeked at character is a letter and of course not an hexadecimal digit and not <c> or <q> then we inform the user of malformed data.
+    else if (peekBack(lexer) == '0' && isLetter(peek(lexer)) && !isDigit(peek(lexer)) && peek(lexer) != 'c' && peek(lexer) != 'q') {
         return errorToken(lexer, "Expected <c> or <q> to indicate whether we have classical or quantum data.");
-
-    // We consume the data type identifier
-    advance(lexer);
+    }
 
     // Now we proceed to matching the actual number itself
-    while (isDigit(peek(lexer)) || isLetter(peek(lexer)))
+    while (isDigit(peek(lexer)))
         advance(lexer);
 
     // Match the fractional part if any
@@ -269,7 +269,7 @@ static struct Token number(struct Lexer * const lexer) {
 
     // Match the data format
     char format = peek(lexer);
-    if (isAlpha(format)) {
+    if (isLetter(format)) {
         // Consume the data format
         advance(lexer);
 
@@ -393,10 +393,10 @@ static struct Token identifier(struct Lexer * const lexer) {
                         if (lexer -> current - lexer -> start > 3) {
                             switch (lexer -> start[3]) {
                                 case 'e':
-                                    return makeToken(lexer, AVL_CASE);
+                                    return handleKeyword(lexer, 3, 1, "e", AVL_CASE);
 
                                 case 't':
-                                    return makeToken(lexer, AVL_CAST);
+                                    return handleKeyword(lexer, 3, 1, "t", AVL_CAST);
                             }
                         }
                         break;
@@ -438,7 +438,7 @@ static struct Token identifier(struct Lexer * const lexer) {
                                     return handleKeyword(lexer, 4, 3, "ult", AVL_DEFAULT);
 
                                 case 'f':
-                                    return makeToken(lexer, AVL_DEF);
+                                    return handleKeyword(lexer, 3, 1, "f", AVL_DEF);
                             }
                         }
                         break;
@@ -477,16 +477,16 @@ static struct Token identifier(struct Lexer * const lexer) {
             if (lexer -> current - lexer -> start > 1) {
                 switch (lexer -> start[1]) {
                     case 'f':
-                        return makeToken(lexer, AVL_IF);
+                        return handleKeyword(lexer, 1, 1, "f", AVL_IF);
 
                     case 'm':
                         return handleKeyword(lexer, 2, 4, "port", AVL_IMPORT);
 
                     case 'n':
-                        return makeToken(lexer, AVL_IN);
+                        return handleKeyword(lexer, 1, 1, "n", AVL_IN);
 
                     case 's':
-                        return makeToken(lexer, AVL_IS);
+                        return handleKeyword(lexer, 1, 1, "s", AVL_IS);
                 }
             }
             break;
@@ -531,7 +531,7 @@ static struct Token identifier(struct Lexer * const lexer) {
                         break;
 
                     case 't':
-                        return handleKeyword(lexer, 2, 1, "t", AVL_PTR);
+                        return handleKeyword(lexer, 2, 1, "r", AVL_PTR);
 
                     case 'u':
                         return handleKeyword(lexer, 2, 4, "blic", AVL_PUBLIC);
@@ -546,7 +546,7 @@ static struct Token identifier(struct Lexer * const lexer) {
                         if (lexer -> current - lexer -> start > 2) {
                             switch (lexer -> start[2]) {
                                 case 'f':
-                                    return makeToken(lexer, AVL_REF);
+                                    return handleKeyword(lexer, 2, 1, "f", AVL_REF);
 
                                 case 't':
                                     return handleKeyword(lexer, 3, 3, "urn", AVL_RETURN);
@@ -579,10 +579,10 @@ static struct Token identifier(struct Lexer * const lexer) {
             if (lexer -> current - lexer -> start > 2) {
                 switch (lexer -> start[2]) {
                     case 'r':
-                        return makeToken(lexer, AVL_VAR);
+                        return handleKeyword(lexer, 2, 1, "r", AVL_VAR);
 
                     case 'l':
-                        return makeToken(lexer, AVL_VAL);
+                        return handleKeyword(lexer, 2, 1, "l", AVL_VAL);
                 }
             }
             break;
@@ -645,8 +645,7 @@ static struct Token handleWhitespace(struct Lexer * const lexer, bool is_space) 
         }
     }
 
-    // We consume the last whitespace that wasn't caught in the loop and increment the whitespace count
-    // advance(lexer);
+    // We increment the whitespace count to account for the last white space
     whitespace_count++;
 
     // Figure out if this is the first indentation and if not then this is our first indentation
@@ -662,9 +661,6 @@ static struct Token handleWhitespace(struct Lexer * const lexer, bool is_space) 
     }
     // If this is not our first indentation, we make sure that the number of blank spaces (tabulations) matched is a multiple of the number of blank spaces (tabulations) matched for the first indentation
     else  {
-        // printf("Whitespace count = %zu\n", whitespace_count);
-        // printf("Last indentation count = %zu\n", lexer -> last_indentation_count);
-
         if (whitespace_count % lexer -> first_indentation_count != 0) {
             if (is_space)
                 return errorToken(lexer, "Expected a valid indentation: the number of spaces that form a valid indentation must be a multiple of the number of spaces that form the first indentation.");
@@ -905,7 +901,7 @@ static char peekBack(struct Lexer const * const lexer) {
  * @param       c the character to verify being a digit.
  */
 static bool isDigit(char c) {
-    return c >= '0' && c <= '9';
+    return (c >= '0' && c <= '9') || (c >= 'A' && c <= 'F');
 }
 
 
