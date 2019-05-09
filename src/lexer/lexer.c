@@ -72,6 +72,7 @@ struct Lexer * newLexer(char const * file, char const * source) {
     lexer -> first_indentation_found = false;
     lexer -> is_first_indentation_space = false;
     lexer -> first_indentation_line = 0;
+    lexer -> first_indentation_count = 0;
     lexer -> last_indentation_count = 0;
 
     return lexer;
@@ -194,7 +195,6 @@ struct Token lexToken(struct Lexer * const lexer) {
         case '}':
             return makeToken(lexer, AVL_RIGHT_BRACE);
 
-        // TODO: Handle identifiers
         case '_':
             if (isAlpha(peek(lexer))) return identifier(lexer);
             return makeToken(lexer, AVL_UNDERSCORE);
@@ -655,6 +655,7 @@ static struct Token handleWhitespace(struct Lexer * const lexer, bool is_space) 
         lexer -> is_first_indentation_space = is_space;
         lexer -> last_indentation_count = whitespace_count;
         lexer -> first_indentation_line = lexer -> line;
+        lexer -> first_indentation_count = whitespace_count;
 
         lexer -> last_indentation_count = whitespace_count;
         return makeToken(lexer, AVL_INDENT);
@@ -664,10 +665,7 @@ static struct Token handleWhitespace(struct Lexer * const lexer, bool is_space) 
         // printf("Whitespace count = %zu\n", whitespace_count);
         // printf("Last indentation count = %zu\n", lexer -> last_indentation_count);
 
-        if (
-            (whitespace_count >= lexer -> last_indentation_count && whitespace_count % lexer -> last_indentation_count != 0) ||
-            (whitespace_count < lexer -> last_indentation_count && lexer -> last_indentation_count % whitespace_count != 0)
-        ) {
+        if (whitespace_count % lexer -> first_indentation_count != 0) {
             if (is_space)
                 return errorToken(lexer, "Expected a valid indentation: the number of spaces that form a valid indentation must be a multiple of the number of spaces that form the first indentation.");
             else
