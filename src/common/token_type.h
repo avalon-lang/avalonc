@@ -68,12 +68,19 @@ enum TokenType {
 
     /* literals */
     AVL_IDENTIFIER,         // variable, function or type name
-    AVL_INTEGER,            // integers
-    AVL_FLOATING_POINT,     // floating point numbers
-    AVL_DECIMAL,            // decimal numbers
     AVL_STRING,             // strings
-    AVL_BITS,               // binary strings
-    AVL_QUBITS,             // qubits
+    AVL_CLASSICAL_INT,      // classical integers
+    AVL_CLASSICAL_FLOAT,    // classical floating point
+    AVL_CLASSICAL_HEX,      // classical hexadecimal
+    AVL_CLASSICAL_OCT,      // classical octal
+    AVL_CLASSICAL_BIT,      // classical bitstring
+    AVL_CLASSICAL_DEC,      // classical decimal
+    AVL_QUANTUM_INT,        // quantum integers
+    AVL_QUANTUM_FLOAT,      // quantum floating point
+    AVL_QUANTUM_HEX,        // quantum hexadecimal
+    AVL_QUANTUM_OCT,        // quantum octal
+    AVL_QUANTUM_BIT,        // quantum bitstring
+    AVL_QUANTUM_DEC,        // quantum decimal
 
     /* keywords */
     AVL_IMPORT,             // import
@@ -83,9 +90,9 @@ enum TokenType {
     AVL_PTR,                // pointer
     AVL_REF,                // reference
     AVL_DREF,               // dereference
-    AVL_CONST_TYPE,         // const
+    AVL_CONST,              // const
     AVL_TYPE,               // type
-    AVL_FUNCTION,           // function
+    AVL_DEF,                // function
     AVL_VAR,                // var
     AVL_VAL,                // val
     AVL_CAST,               // cast
@@ -103,16 +110,24 @@ enum TokenType {
     AVL_RETURN,             // return
     AVL_PASS,               // pass
     AVL_IN,                 // in
-    AVL_NOT_IN,             // not in
-    AVL_NEXT_IN,            // next in
-    AVL_PREV_IN,            // previously in
+    AVL_NEXT,               // next
+    AVL_PREV,               // prev
     AVL_IS,                 // is
-    AVL_IS_NOT,             // is not
-    AVL_IS_UNIQUE,          // is unique
+    AVL_UNIQUE,             // unique
 
     /* specials */
     AVL_EOF,                // end file
     AVL_ERROR               // token representing a lexer error
 };
+
+
+/**
+ * Returns the string representation of a token type
+ *
+ * @param       type the token type to get the string form of.
+ *
+ * @return      the string representation of a token type.
+ */
+char const * tokenTypeToString(enum TokenType type);
 
 #endif

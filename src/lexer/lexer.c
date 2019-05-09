@@ -26,15 +26,23 @@
 #include "lexer/lexer.h"
 
 
+static struct Token number(struct Lexer * const lexer);
+static struct Token identifier(struct Lexer * const lexer);
+static struct Token handleKeyword(struct Lexer * const lexer, size_t start, size_t length, char const * rest, enum TokenType type);
 static struct Token handleWhitespace(struct Lexer * const lexer, bool is_space);
 static void skipWhitespace(struct Lexer * const lexer);
 static void skipSingleComment(struct Lexer * const lexer);
 static void skipMultiComment(struct Lexer * const lexer);
+static bool isAtStart(struct Lexer const * const lexer);
 static bool isAtEnd(struct Lexer const * const lexer);
 static char advance(struct Lexer * const lexer);
 static bool match(struct Lexer * const lexer, char expected);
 static char peek(struct Lexer const * const lexer);
 static char peekNext(struct Lexer const * const lexer);
+static char peekBack(struct Lexer const * const lexer);
+static bool isDigit(char c);
+static bool isLetter(char c);
+static bool isAlpha(char c);
 static struct Token makeToken(struct Lexer const * const lexer, enum TokenType type);
 static struct Token errorToken(struct Lexer const * const lexer, char const * message);
 
@@ -54,6 +62,7 @@ struct Lexer * newLexer(char const * file, char const * source) {
     }
 
     lexer -> file = file;
+    lexer -> source = source;
     lexer -> start = source;
     lexer -> current = source;
     lexer -> line = 1;
@@ -88,6 +97,10 @@ void deleteLexer(struct Lexer ** lexer) {
  * @return      dynamic array containing all the tokens that have been read.
  */
 struct Token lexToken(struct Lexer * const lexer) {
+    // If the previous token was a new line but the next token is not a space, we can ignore whitespace until the next new line is reached
+    if (peekBack(lexer) == '\n' && peek(lexer) != ' ')
+        lexer -> ignore_whitespace = true;
+
     // Before lexing the next token, we make sure to skip any unnecessary whitespace if we are allowed to.
     if (lexer -> ignore_whitespace == true)
         skipWhitespace(lexer);
@@ -98,6 +111,7 @@ struct Token lexToken(struct Lexer * const lexer) {
         return makeToken(lexer, AVL_EOF);
     
     char c = advance(lexer);
+
     switch (c) {
         case '.':
             return makeToken(lexer, AVL_DOT);
@@ -182,6 +196,7 @@ struct Token lexToken(struct Lexer * const lexer) {
 
         // TODO: Handle identifiers
         case '_':
+            if (isAlpha(peek(lexer))) return identifier(lexer);
             return makeToken(lexer, AVL_UNDERSCORE);
 
         case '\n': {
@@ -199,12 +214,395 @@ struct Token lexToken(struct Lexer * const lexer) {
             return handleWhitespace(lexer, true);
 
         default:
-            ;
+            if (isAlpha(c))
+                return identifier(lexer);
+
+            if (isDigit(c))
+                return number(lexer);
     }
 
     return errorToken(lexer, "Unexpected character.");
 }
 
+
+/**
+ * Handle numbers.
+ *
+ * @param       lexer pointer to the lexer.
+ *
+ * @return      the token representing the appropriate number
+ */
+static struct Token number(struct Lexer * const lexer) {
+    bool is_classical = false;
+    bool is_decimal = false;
+
+    // We expect the first character in the stream to be zero to indicate the type of number we are dealing (classical or quantum)
+    if (peekBack(lexer) != '0')
+        return errorToken(lexer, "Expected <0> before <c> or <q> to indicate the type of data which can be classical or quantum respectively.");
+
+    // We expect the next character in the stream to be <c> or <q> to indicate whether we have classical data or quantum data
+    if (peek(lexer) == 'c')
+        is_classical = true;
+    else if(peek(lexer) == 'q')
+        is_classical = false;
+    else
+        return errorToken(lexer, "Expected <c> or <q> to indicate whether we have classical or quantum data.");
+
+    // We consume the data type identifier
+    advance(lexer);
+
+    // Now we proceed to matching the actual number itself
+    while (isDigit(peek(lexer)) || isLetter(peek(lexer)))
+        advance(lexer);
+
+    // Match the fractional part if any
+    if (peek(lexer) == '.' && isDigit(peekNext(lexer))) {
+        // Consume the decimal point
+        advance(lexer);
+
+        // Mark the current lexeme as being decimal
+        is_decimal = true;
+
+        while (isDigit(peek(lexer)))
+            advance(lexer);
+    }
+
+    // Match the data format
+    char format = peek(lexer);
+    if (isAlpha(format)) {
+        // Consume the data format
+        advance(lexer);
+
+        if (is_classical && !is_decimal) {
+            if (format == 'b') {
+                return makeToken(lexer, AVL_CLASSICAL_BIT);
+            }
+            else if (format == 'h') {
+                return makeToken(lexer, AVL_CLASSICAL_HEX);
+            }
+            else if (format == 'o') {
+                return makeToken(lexer, AVL_CLASSICAL_OCT);
+            }
+            else if(format == 'd') {
+                return makeToken(lexer, AVL_CLASSICAL_INT);
+            }
+            else {
+                return errorToken(lexer, "Unexpected data format for classical integers. Valid formats for integers are: <b> for bits, <h> for hexadecimals, <o> for octals and <d> for base 10.");
+            }
+        }
+        else if (is_classical && is_decimal) {
+            if (format == 'f') {
+                return makeToken(lexer, AVL_CLASSICAL_FLOAT);
+            }
+            else if (format == 'd') {
+                return makeToken(lexer, AVL_CLASSICAL_DEC);
+            }
+        }
+        else if (!is_classical && !is_decimal) {
+            if (format == 'b') {
+                return makeToken(lexer, AVL_QUANTUM_BIT);
+            }
+            else if (format == 'h') {
+                return makeToken(lexer, AVL_QUANTUM_HEX);
+            }
+            else if (format == 'o') {
+                return makeToken(lexer, AVL_QUANTUM_OCT);
+            }
+            else if(format == 'd') {
+                return makeToken(lexer, AVL_QUANTUM_INT);
+            }
+            else {
+                return errorToken(lexer, "Unexpected data format for quantum integers. Valid formats for integers are: <b> for bits, <h> for hexadecimals, <o> for octals and <d> for base 10.");
+            }
+        }
+        else {
+            if (format == 'f') {
+                return makeToken(lexer, AVL_QUANTUM_FLOAT);
+            }
+            else if (format == 'd') {
+                return makeToken(lexer, AVL_QUANTUM_DEC);
+            }
+        }
+    }
+    else {
+        // If the data format is missing, we go on to assume default data formats.
+        if (is_classical && !is_decimal) {
+            return makeToken(lexer, AVL_CLASSICAL_INT);
+        }
+        else if (is_classical && is_decimal) {
+            return makeToken(lexer, AVL_CLASSICAL_FLOAT);
+        }
+        else if (!is_classical && !is_decimal) {
+            return makeToken(lexer, AVL_QUANTUM_INT);
+        }
+        else {
+            return makeToken(lexer, AVL_QUANTUM_FLOAT);
+        }
+    }
+
+    // This line exists here because the compiler is warning me that control reaches the end of a non-void function without a return statement but I'm sure all paths are accounted for.
+    // I anticipate the C compiler does its termination analysis conservatively but I can't help wonder why I'm being warned about this.
+    fprintf(stderr, "[Lexer bug] We finished lexing a number but missed a case.\n");
+    exit(74);
+}
+
+
+/**
+ * Handle identifiers.
+ *
+ * @param       lexer pointer to the lexer.
+ *
+ * @return      a IDENTIFIER token.
+ */
+static struct Token identifier(struct Lexer * const lexer) {
+    while (isAlpha(peek(lexer)) || isDigit(peek(lexer)))
+        advance(lexer);
+
+    switch (lexer -> start[0]) {
+        case 'a':
+            return handleKeyword(lexer, 1, 2, "nd", AVL_LOGICAL_AND);
+
+        case 'b':
+            if (lexer -> current - lexer -> start > 1) {
+                switch (lexer -> start[1]) {
+                    case 'a':
+                        return handleKeyword(lexer, 2, 2, "nd", AVL_BITWISE_AND);
+
+                    case 'n':
+                        return handleKeyword(lexer, 2, 2, "ot", AVL_BITWISE_NOT);
+
+                    case 'o':
+                        return handleKeyword(lexer, 2, 1, "r", AVL_BITWISE_OR);
+
+                    case 'r':
+                        return handleKeyword(lexer, 2, 3, "eak", AVL_BREAK);
+                }
+            }
+            break;
+
+        case 'c':
+            if (lexer -> current - lexer -> start > 1) {
+                switch (lexer -> start[1]) {
+                    case 'a':
+                        if (lexer -> current - lexer -> start <= 2)
+                            return makeToken(lexer, AVL_IDENTIFIER);
+
+                        if (lexer -> start[2] != 's')
+                            return makeToken(lexer, AVL_IDENTIFIER);
+
+                        if (lexer -> current - lexer -> start > 3) {
+                            switch (lexer -> start[3]) {
+                                case 'e':
+                                    return makeToken(lexer, AVL_CASE);
+
+                                case 't':
+                                    return makeToken(lexer, AVL_CAST);
+                            }
+                        }
+                        break;
+
+                    case 'o':
+                        if (lexer -> current - lexer -> start <= 2)
+                            return makeToken(lexer, AVL_IDENTIFIER);
+
+                        if (lexer -> start[2] != 'n')
+                            return makeToken(lexer, AVL_IDENTIFIER);
+
+                        if (lexer -> current - lexer -> start > 3) {
+                            switch (lexer -> start[3]) {
+                                case 's':
+                                    return handleKeyword(lexer, 4, 1, "t", AVL_CONST);
+
+                                case 't':
+                                    return handleKeyword(lexer, 4, 4, "inue", AVL_CONTINUE);
+                            }
+                        }
+                        break;
+                }
+            }
+            break;
+
+        case 'd':
+            if (lexer -> current - lexer -> start > 1) {
+                switch (lexer -> start[1]) {
+                    case 'e':
+                        if (lexer -> current - lexer -> start <= 2)
+                            return makeToken(lexer, AVL_IDENTIFIER);
+
+                        if (lexer -> start[2] != 'f')
+                            return makeToken(lexer, AVL_IDENTIFIER);
+
+                        if (lexer -> current -  lexer -> start > 3) {
+                            switch (lexer -> start[3]) {
+                                case 'a':
+                                    return handleKeyword(lexer, 4, 3, "ult", AVL_DEFAULT);
+
+                                case 'f':
+                                    return makeToken(lexer, AVL_DEF);
+                            }
+                        }
+                        break;
+
+                    case 'r':
+                        return handleKeyword(lexer, 2, 2, "ef", AVL_DREF);
+                }
+            }
+            break;
+
+        case 'e':
+            if (lexer -> current - lexer -> start > 1) {
+                switch (lexer -> start[1]) {
+                    case 'l':
+                        if (lexer -> current - lexer -> start > 2) {
+                            switch (lexer -> start[2]) {
+                                case 'i':
+                                    return handleKeyword(lexer, 3, 1, "f", AVL_ELIF);
+
+                                case 's':
+                                    return handleKeyword(lexer, 3, 1, "e", AVL_ELSE);
+                            }
+                        }
+                        break;
+
+                    case 'm':
+                        return handleKeyword(lexer, 2, 3, "pty", AVL_EMPTY);
+                }
+            }
+            break;
+
+        case 'f':
+            return handleKeyword(lexer, 1, 2, "or", AVL_FOR);
+
+        case 'i':
+            if (lexer -> current - lexer -> start > 1) {
+                switch (lexer -> start[1]) {
+                    case 'f':
+                        return makeToken(lexer, AVL_IF);
+
+                    case 'm':
+                        return handleKeyword(lexer, 2, 4, "port", AVL_IMPORT);
+
+                    case 'n':
+                        return makeToken(lexer, AVL_IN);
+
+                    case 's':
+                        return makeToken(lexer, AVL_IS);
+                }
+            }
+            break;
+
+        case 'l':
+            return handleKeyword(lexer, 1, 2, "sh", AVL_LEFT_SHIFT);
+
+        case 'n':
+            if (lexer -> current - lexer -> start > 1) {
+                switch (lexer -> start[1]) {
+                    case 'a':
+                        return handleKeyword(lexer, 2, 7, "mespace", AVL_NAMESPACE);
+
+                    case 'e':
+                        return handleKeyword(lexer, 2, 2, "xt", AVL_NEXT);
+
+                    case 'o':
+                        return handleKeyword(lexer, 2, 1, "t", AVL_LOGICAL_NOT);
+                }
+            }
+            break;
+
+        case 'o':
+            return handleKeyword(lexer, 1, 1, "r", AVL_LOGICAL_OR);
+
+        case 'p':
+            if (lexer -> current - lexer -> start > 1) {
+                switch (lexer -> start[1]) {
+                    case 'a':
+                        return handleKeyword(lexer, 2, 2, "ss", AVL_PASS);
+
+                    case 'r':
+                        if (lexer -> current - lexer -> start > 2) {
+                            switch (lexer -> start[2]) {
+                                case 'e':
+                                    return handleKeyword(lexer, 3, 1, "v", AVL_PREV);
+
+                                case 'i':
+                                    return handleKeyword(lexer, 3, 4, "vate", AVL_PRIVATE);
+                            }
+                        }
+                        break;
+
+                    case 't':
+                        return handleKeyword(lexer, 2, 1, "t", AVL_PTR);
+
+                    case 'u':
+                        return handleKeyword(lexer, 2, 4, "blic", AVL_PUBLIC);
+                }
+            }
+            break;
+
+        case 'r':
+            if (lexer -> current - lexer -> start > 1) {
+                switch (lexer -> start[1]) {
+                    case 'e':
+                        if (lexer -> current - lexer -> start > 2) {
+                            switch (lexer -> start[2]) {
+                                case 'f':
+                                    return makeToken(lexer, AVL_REF);
+
+                                case 't':
+                                    return handleKeyword(lexer, 3, 3, "urn", AVL_RETURN);
+                            }
+                        }
+                        break;
+
+                    case 's':
+                        return handleKeyword(lexer, 2, 1, "h", AVL_RIGHT_SHIFT);
+                }
+            }
+            break;
+
+        case 's':
+            return handleKeyword(lexer, 1, 5, "witch", AVL_SWITCH);
+
+        case 't':
+            return handleKeyword(lexer, 1, 3, "ype", AVL_TYPE);
+
+        case 'u':
+            return handleKeyword(lexer, 1, 5, "nique", AVL_UNIQUE);
+
+        case 'v':
+            if (lexer -> current - lexer -> start <= 1)
+                return makeToken(lexer, AVL_IDENTIFIER);
+
+            if (lexer -> start[1] != 'a')
+                return makeToken(lexer, AVL_IDENTIFIER);
+
+            if (lexer -> current - lexer -> start > 2) {
+                switch (lexer -> start[2]) {
+                    case 'r':
+                        return makeToken(lexer, AVL_VAR);
+
+                    case 'l':
+                        return makeToken(lexer, AVL_VAL);
+                }
+            }
+            break;
+
+        case 'w':
+            return handleKeyword(lexer, 1, 4, "hile", AVL_WHILE);
+
+        case 'x':
+            return handleKeyword(lexer, 1, 2, "or", AVL_BITWISE_XOR);
+    }
+
+    return makeToken(lexer, AVL_IDENTIFIER);
+}
+
+static struct Token handleKeyword(struct Lexer * const lexer, size_t start, size_t length, char const * rest, enum TokenType type) {
+    if ((size_t) (lexer -> current - lexer -> start) == start + length && memcmp(lexer -> start + start, rest, length) == 0)
+        return makeToken(lexer, type);
+
+    return makeToken(lexer, AVL_IDENTIFIER);
+}
 
 /**
  * Handle blank spaces and tabulations where they are significant.
@@ -247,6 +645,10 @@ static struct Token handleWhitespace(struct Lexer * const lexer, bool is_space) 
         }
     }
 
+    // We consume the last whitespace that wasn't caught in the loop and increment the whitespace count
+    // advance(lexer);
+    whitespace_count++;
+
     // Figure out if this is the first indentation and if not then this is our first indentation
     if (lexer -> first_indentation_found == false) {
         lexer -> first_indentation_found = true;
@@ -259,7 +661,13 @@ static struct Token handleWhitespace(struct Lexer * const lexer, bool is_space) 
     }
     // If this is not our first indentation, we make sure that the number of blank spaces (tabulations) matched is a multiple of the number of blank spaces (tabulations) matched for the first indentation
     else  {
-        if (whitespace_count % lexer -> last_indentation_count != 0) {
+        // printf("Whitespace count = %zu\n", whitespace_count);
+        // printf("Last indentation count = %zu\n", lexer -> last_indentation_count);
+
+        if (
+            (whitespace_count >= lexer -> last_indentation_count && whitespace_count % lexer -> last_indentation_count != 0) ||
+            (whitespace_count < lexer -> last_indentation_count && lexer -> last_indentation_count % whitespace_count != 0)
+        ) {
             if (is_space)
                 return errorToken(lexer, "Expected a valid indentation: the number of spaces that form a valid indentation must be a multiple of the number of spaces that form the first indentation.");
             else
@@ -268,10 +676,6 @@ static struct Token handleWhitespace(struct Lexer * const lexer, bool is_space) 
 
         // We figure out if we must emit a INDENT or DEDENT token
         // If the number of blank spaces (tabulations) found is equal to the number of blank spaces (tabulations) of the last indentation (dedentation), we emit an INDENT token
-
-        printf("Whitespace count = %zu\n", whitespace_count);
-        printf("Last indentation count = %zu\n", lexer -> last_indentation_count);
-        
         if (whitespace_count == lexer -> last_indentation_count) {
             return makeToken(lexer, AVL_INDENT);
         }
@@ -397,6 +801,18 @@ static void skipMultiComment(struct Lexer * const lexer) {
 
 
 /**
+ * Returns true if we are at the beginning of the source.
+ *
+ * @param       lexer pointer to the lexer.
+ *
+ * @return      true if we are at the beginning of the source, false otherwise.
+ */
+static bool isAtStart(struct Lexer const * const lexer) {
+    return * lexer -> current == * lexer -> source;
+}
+
+
+/**
  * Returns true if we encounter the null byte character which signals the end of the source file.
  *
  * @param       lexer pointer to the lexer.
@@ -467,6 +883,51 @@ static char peekNext(struct Lexer const * const lexer) {
         return '\0';
 
     return lexer -> current[1];
+}
+
+
+/**
+ * Returns the previous character pointed to by the lexer in the stream.
+ *
+ * @param       lexer pointer to the lexer.
+ *
+ * @return      the previous character pointed to in the source.
+ */
+static char peekBack(struct Lexer const * const lexer) {
+    if (isAtStart(lexer))
+        return '\0';
+
+    return lexer -> current[-1];
+}
+
+
+/**
+ * Returns true if the given character is a digit.
+ *
+ * @param       c the character to verify being a digit.
+ */
+static bool isDigit(char c) {
+    return c >= '0' && c <= '9';
+}
+
+
+/**
+ * Returns true if the given character is a letter.
+ *
+ * @param       c the character to verify being a letter.
+ */
+static bool isLetter(char c) {
+    return (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z');
+}
+
+
+/**
+ * Returns true if the given character is a letter or underscore.
+ *
+ * @param       c the character to verify being a letter or underscore.
+ */
+static bool isAlpha(char c) {
+    return (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') || c == '_';
 }
 
 

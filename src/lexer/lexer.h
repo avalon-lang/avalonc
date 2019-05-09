@@ -27,6 +27,7 @@
 
 struct Lexer {
     char const * file;
+    char const * source;
     char const * start;
     char const * current;
     size_t line;

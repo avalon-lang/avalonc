@@ -22,6 +22,7 @@
 
 #include "utils/file.h"
 #include "lexer/lexer.h"
+#include "common/token_type.h"
 
 
 void compile(char const * source_path);
@@ -65,18 +66,22 @@ void compile(char const * source_path) {
     printf("%s\n", source);
 
     struct Lexer * lexer = newLexer(source_path, source);
-    int line = -1;
+    size_t line = 0;
     for (;;) {
         struct Token token = lexToken(lexer);
-        if ((int) token.line != line) {
-            printf("%4d ", (int) token.line);
+        if (token.line != line) {
+            printf("%4zu ", token.line);
             line = (int) token.line;
         } else {
             printf("   | ");
         }
-        printf("%2d '%.*s'\n", token.type, (int) token.length, token.start);
+        if (token.type == AVL_NEWLINE)
+            printf("%-20s ''\n", tokenTypeToString(token.type));
+        else
+            printf("%-20s '%.*s'\n", tokenTypeToString(token.type), (int) token.length, token.start);
 
-        if (token.type == AVL_EOF) break;
+        if (token.type == AVL_EOF)
+            break;
     }
 
     free(source);
