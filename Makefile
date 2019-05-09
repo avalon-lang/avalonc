@@ -41,4 +41,4 @@ clean:
 
 .PHONY: grind
 grind:
-	@valgrind --leak-check=full --leak-resolution=high --track-origins=yes $(TARGET)
+	@valgrind --leak-check=full --leak-resolution=high --track-origins=yes $(TARGET) $(program)
