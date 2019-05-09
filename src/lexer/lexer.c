@@ -28,10 +28,13 @@
 
 static struct Token handleWhitespace(struct Lexer * const lexer, bool is_space);
 static void skipWhitespace(struct Lexer * const lexer);
-static bool isAtEnd(struct Lexer * const lexer);
+static void skipSingleComment(struct Lexer * const lexer);
+static void skipMultiComment(struct Lexer * const lexer);
+static bool isAtEnd(struct Lexer const * const lexer);
 static char advance(struct Lexer * const lexer);
 static bool match(struct Lexer * const lexer, char expected);
 static char peek(struct Lexer const * const lexer);
+static char peekNext(struct Lexer const * const lexer);
 static struct Token makeToken(struct Lexer const * const lexer, enum TokenType type);
 static struct Token errorToken(struct Lexer const * const lexer, char const * message);
 
@@ -112,8 +115,6 @@ struct Token lexToken(struct Lexer * const lexer) {
             return makeToken(lexer, AVL_PLUS);
 
         case '-':
-            // if (match(lexer, '-')) return comment(lexer);
-            // if (match(lexer, '[')) return multiComment(lexer);
             if (match(lexer, '>')) return makeToken(lexer, AVL_RETURN_TYPE);
             if (match(lexer, '/')) return makeToken(lexer, AVL_NS_OPEN);
             return makeToken(lexer, AVL_MINUS);
@@ -183,11 +184,13 @@ struct Token lexToken(struct Lexer * const lexer) {
         case '_':
             return makeToken(lexer, AVL_UNDERSCORE);
 
-        case '\n':
+        case '\n': {
+            struct Token token = makeToken(lexer, AVL_NEWLINE);
             lexer -> line++;
             lexer -> column = 1;
             lexer -> ignore_whitespace = false;
-            return makeToken(lexer, AVL_NEWLINE);
+            return token;
+        }
 
         case '\t':
             return handleWhitespace(lexer, false);
@@ -265,6 +268,10 @@ static struct Token handleWhitespace(struct Lexer * const lexer, bool is_space) 
 
         // We figure out if we must emit a INDENT or DEDENT token
         // If the number of blank spaces (tabulations) found is equal to the number of blank spaces (tabulations) of the last indentation (dedentation), we emit an INDENT token
+
+        printf("Whitespace count = %zu\n", whitespace_count);
+        printf("Last indentation count = %zu\n", lexer -> last_indentation_count);
+        
         if (whitespace_count == lexer -> last_indentation_count) {
             return makeToken(lexer, AVL_INDENT);
         }
@@ -291,15 +298,100 @@ static void skipWhitespace(struct Lexer * const lexer) {
     for (;;) {
         char c = peek(lexer);
         switch (c) {
+            // We handle generic whitespace
             case '\r':
             case '\t':
             case ' ':
                 advance(lexer);
                 break;
 
+            // We treat comments as whitespace and handle them here
+            case '-':
+                if (peekNext(lexer) == '-') {
+                    skipSingleComment(lexer);
+                }
+                else if (peekNext(lexer) == '[') {
+                    // since we are sure we have a multi line comment, we consume the MINUS token in order to avoid clashing with nested comments
+                    advance(lexer);
+                    skipMultiComment(lexer);
+                }
+                else {
+                    return;
+                }
+
             default:
                 return;
         }
+    }
+}
+
+
+/**
+ * Skips single line comments.
+ *
+ * @param       lexer pointer to the lexer.
+ */
+static void skipSingleComment(struct Lexer * const lexer) {
+    while (peek(lexer) != '\n' && isAtEnd(lexer) == false)
+        advance(lexer);
+
+    // we consume the newline since comments may appear at the beginning of a source
+    if (peek(lexer) == '\n' && isAtEnd(lexer) == false) {
+        advance(lexer);
+        lexer -> line++;
+        lexer -> column = 1;
+    }
+}
+
+
+/**
+ * Skips multiple lines comments.
+ *
+ * @param       lexer pointer to the lexer.
+ */
+static void skipMultiComment(struct Lexer * const lexer) {
+    size_t levels = 0;
+    size_t line = lexer -> line;
+    bool terminated = false;
+
+    while (isAtEnd(lexer) == false) {
+        // if we have nested comments
+        if (peek(lexer) == '-' && peekNext(lexer) == '[') {
+            levels++;
+        }
+        
+        // We handle comment closing
+        if (peek(lexer) == ']' && peekNext(lexer) == '-') {
+            // we make sure to consume the closing characters because the advance() at the end of the loop cannot
+            advance(lexer);
+            advance(lexer);
+
+            if (levels == 0) {
+                terminated = true;
+                break;
+            }
+            else {
+                levels--;
+            }
+        }
+        
+        // Gracefully handle newlines inside comments
+        if (peek(lexer) == '\n') {
+            lexer -> line++;
+            lexer -> column = 1;
+        }
+
+        advance(lexer);
+    }
+
+    if (isAtEnd(lexer) && terminated == false)
+        fprintf(stderr, "Unterminated multi line comment starting at line %zu.\n", line);
+
+    // we consume the newline since comments may appear at the beginning of a source
+    if (peek(lexer) == '\n' && isAtEnd(lexer) == false) {
+        advance(lexer);
+        lexer -> line++;
+        lexer -> column = 1;
     }
 }
 
@@ -311,7 +403,7 @@ static void skipWhitespace(struct Lexer * const lexer) {
  *
  * @return      true if we are at the end of the source, false otherwise.
  */
-static bool isAtEnd(struct Lexer * const lexer) {
+static bool isAtEnd(struct Lexer const * const lexer) {
     return * lexer -> current == '\0';
 }
 
@@ -360,6 +452,21 @@ static bool match(struct Lexer * const lexer, char expected) {
  */
 static char peek(struct Lexer const * const lexer) {
     return * lexer -> current;
+}
+
+
+/**
+ * Returns the next character to be pointed to by the lexer in the stream.
+ *
+ * @param       lexer pointer to the lexer.
+ *
+ * @return      the next character to be pointed to in the source.
+ */
+static char peekNext(struct Lexer const * const lexer) {
+    if (isAtEnd(lexer))
+        return '\0';
+
+    return lexer -> current[1];
 }
 
 
