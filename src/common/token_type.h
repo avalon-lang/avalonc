@@ -42,6 +42,7 @@ enum TokenType {
     AVL_NEWLINE,            // \n
     AVL_INDENT,             // space or tab
     AVL_DEDENT,             // backspace(s)
+    AVL_NO_INDENT,          // current identation is same as previous indentation
 
     /* one or two character tokens - even if we get one character, we must make sure it is not actually part of a two or more character lexeme */
     AVL_EQUAL,              // =

@@ -48,17 +48,24 @@ struct Lexer {
      * first_indentation_found      : signals whether we have our first indentation.
      * is_first_indentation_space   : signals whehter the first indentation found is a space or a tab.
      * first_indentation_line       : for error reporting purposes, we keep track of the line where the first indentation was found. This is so we can let users know how many spaces (tabs) their first indentation is made of.
-     * first_indentation_count      : the number of spaces (tabulations) encountered for the first indentation.
+     * first_indentation_size      : the number of spaces (tabulations) encountered for the first indentation.
      */
     bool first_indentation_found;
     bool is_first_indentation_space;
     size_t first_indentation_line;
-    size_t first_indentation_count;
+    size_t first_indentation_size;
 
     /* Indentation tracking
      * This helps determine if we should emit an INDENT token or a DEDENT token.
      */
-    size_t last_indentation_count;
+    size_t last_indentation_size;
+
+    /**
+     * Dedentation tracking
+     * THis helps determine how many dedentations tokens we should issue.
+     */
+    size_t indentation_count;
+    size_t dedentation_count;
 };
 
 

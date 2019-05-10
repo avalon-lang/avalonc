@@ -48,6 +48,7 @@ char const * tokenTypeToString(enum TokenType type) {
         "NEWLINE",              // \n
         "INDENT",               // space or tab
         "DEDENT",               // backspace(s)
+        "NO_INDENT",            // current identation is same as previous indentation
 
         /* one or two character tokens - even if we get one character, we must make sure it is not actually part of a two or more character lexeme */
         "EQUAL",                // =
