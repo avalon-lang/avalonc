@@ -30,7 +30,7 @@ static struct Token number(struct Lexer * const lexer);
 static struct Token identifier(struct Lexer * const lexer);
 static struct Token handleKeyword(struct Lexer * const lexer, size_t start, size_t length, char const * rest, enum TokenType type);
 static struct Token handleWhitespace(struct Lexer * const lexer, bool is_space);
-static void skipWhitespace(struct Lexer * const lexer);
+static void skipWhitespace(struct Lexer * const lexer, bool last_newline);
 static void skipSingleComment(struct Lexer * const lexer);
 static void skipMultiComment(struct Lexer * const lexer);
 static bool isAtStart(struct Lexer const * const lexer);
@@ -111,6 +111,7 @@ struct Token lexToken(struct Lexer * const lexer) {
     // This is required to emit balanced dedents that correspond to emitted indents when a declaration was introduced
     if (peekBack(lexer) == '\n' && (peek(lexer) != ' ' && peek(lexer) != '\t' && peek(lexer) != '\n')) {
         lexer -> dedentation_count = 0;
+        lexer -> last_indentation_size = 0;
 
         while (lexer -> indentation_count > 0) {
             lexer -> indentation_count--;
@@ -124,7 +125,7 @@ struct Token lexToken(struct Lexer * const lexer) {
 
     // Before lexing the next token, we make sure to skip any unnecessary whitespace if we are allowed to.
     if (lexer -> ignore_whitespace == true)
-        skipWhitespace(lexer);
+        skipWhitespace(lexer, peekBack(lexer) == '\n' ? true : false);
 
     lexer -> start = lexer -> current;
 
@@ -220,6 +221,13 @@ struct Token lexToken(struct Lexer * const lexer) {
             return makeToken(lexer, AVL_UNDERSCORE);
 
         case '\n': {
+            // We ignore all new lines that follow the current one because they provide no useful information to the parser
+            while (peek(lexer) == '\n') {
+                advance(lexer);
+                lexer -> line++;
+            }
+
+            // We return only the current new line
             struct Token token = makeToken(lexer, AVL_NEWLINE);
             lexer -> line++;
             lexer -> column = 1;
@@ -702,11 +710,18 @@ static struct Token handleWhitespace(struct Lexer * const lexer, bool is_space) 
                 return errorToken(lexer, "Expected a valid indentation: the number of tabulations that form a valid indentation must be a multiple of the number of tabulations that form the first indentation.");
         }
 
-        if ((size_t) abs(whitespace_size - lexer -> last_indentation_size) != lexer -> first_indentation_size) {
+        if (whitespace_size > lexer -> last_indentation_size && ((size_t) abs(whitespace_size - lexer -> last_indentation_size)) != lexer -> first_indentation_size) {
             if (is_space)
-                return errorToken(lexer, "Expected a valid indentation: the number of blank spaces must increase or decrease by the number of blank spaces used for the first indentation.");
+                return errorToken(lexer, "Expected a valid indentation: the number of blank spaces must increase by the number of blank spaces used for the first indentation.");
             else
-                return errorToken(lexer, "Expected a valid indentation: the number of tabulations must increase or decrease by the number of tabulations used for the first indentation.");
+                return errorToken(lexer, "Expected a valid indentation: the number of tabulations must increase by the number of tabulations used for the first indentation.");
+        }
+
+        if (whitespace_size < lexer -> last_indentation_size && ((size_t) abs(whitespace_size - lexer -> last_indentation_size)) % lexer -> first_indentation_size != 0) {
+            if (is_space)
+                return errorToken(lexer, "Expected a valid indentation: the number of blank spaces must decrease by the number of blank spaces used for the first indentation.");
+            else
+                return errorToken(lexer, "Expected a valid indentation: the number of tabulations must decrease by the number of tabulations used for the first indentation.");
         }
 
         // We figure out if we must emit a INDENT or DEDENT token
@@ -737,7 +752,7 @@ static struct Token handleWhitespace(struct Lexer * const lexer, bool is_space) 
  *
  * @param       lexer pointer to the lexer.
  */
-static void skipWhitespace(struct Lexer * const lexer) {
+static void skipWhitespace(struct Lexer * const lexer, bool last_newline) {
     for (;;) {
         char c = peek(lexer);
         switch (c) {
@@ -767,6 +782,16 @@ static void skipWhitespace(struct Lexer * const lexer) {
                 return;
         }
     }
+
+    // If the last token before skipping whitespace characters was a new line and the next if a new line, we ignore the fresh new line
+    while (last_newline && peek(lexer) == '\n') {
+        advance(lexer);
+        lexer -> line++;
+    }
+
+    // If the next character (after consuming potential new lines) is a whitespace character, we recurse
+    if (peek(lexer) == ' ' || peek(lexer) == '\t' || peek(lexer) == '\r' || (peek(lexer) == '-' && peek(lexer) == '-') || (peek(lexer) == '-' && peek(lexer) == '['))
+        skipWhitespace(lexer, false);
 }
 
 
