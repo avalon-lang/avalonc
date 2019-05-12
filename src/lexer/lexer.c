@@ -697,9 +697,16 @@ static struct Token handleWhitespace(struct Lexer * const lexer, bool is_space) 
     else  {
         if (whitespace_size % lexer -> first_indentation_size != 0) {
             if (is_space)
-                return errorToken(lexer, "Expected a valid indentation: the number of spaces that form a valid indentation must be a multiple of the number of spaces that form the first indentation.");
+                return errorToken(lexer, "Expected a valid indentation: the number of blank spaces that form a valid indentation must be a multiple of the number of blank spaces that form the first indentation.");
             else
                 return errorToken(lexer, "Expected a valid indentation: the number of tabulations that form a valid indentation must be a multiple of the number of tabulations that form the first indentation.");
+        }
+
+        if ((size_t) abs(whitespace_size - lexer -> last_indentation_size) != lexer -> first_indentation_size) {
+            if (is_space)
+                return errorToken(lexer, "Expected a valid indentation: the number of blank spaces must increase or decrease by the number of blank spaces used for the first indentation.");
+            else
+                return errorToken(lexer, "Expected a valid indentation: the number of tabulations must increase or decrease by the number of tabulations used for the first indentation.");
         }
 
         // We figure out if we must emit a INDENT or DEDENT token
