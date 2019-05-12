@@ -109,7 +109,7 @@ struct Token lexToken(struct Lexer * const lexer) {
 
     // We take care to issue dedentations that match indentations outside of declarations
     // This is required to emit balanced dedents that correspond to emitted indents when a declaration was introduced
-    if (peekBack(lexer) == '\n' && (peek(lexer) != ' ' && peek(lexer) != '\n')) {
+    if (peekBack(lexer) == '\n' && (peek(lexer) != ' ' && peek(lexer) != '\t' && peek(lexer) != '\n')) {
         lexer -> dedentation_count = 0;
 
         while (lexer -> indentation_count > 0) {
@@ -119,7 +119,7 @@ struct Token lexToken(struct Lexer * const lexer) {
     }
 
     // If the previous token was a new line but the next token is not a space, we can ignore whitespace until the next new line is reached
-    if (peekBack(lexer) == '\n' && peek(lexer) != ' ')
+    if (peekBack(lexer) == '\n' && peek(lexer) != ' ' && peek(lexer) != '\t')
         lexer -> ignore_whitespace = true;
 
     // Before lexing the next token, we make sure to skip any unnecessary whitespace if we are allowed to.
@@ -689,6 +689,7 @@ static struct Token handleWhitespace(struct Lexer * const lexer, bool is_space) 
         lexer -> first_indentation_line = lexer -> line;
         lexer -> first_indentation_size = whitespace_size;
 
+        lexer -> indentation_count = 1;
         lexer -> last_indentation_size = whitespace_size;
         return makeToken(lexer, AVL_INDENT);
     }

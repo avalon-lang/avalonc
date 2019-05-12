@@ -14,9 +14,9 @@ BUILD_DIR   := build
 BIN_DIR     := bin
 TARGET      := $(BIN_DIR)/avalonc
 
-SRC_EXT     := c
-SOURCES     := $(shell find $(SRC_DIR) -type f -name *.$(SRC_EXT))
-OBJECTS     := $(patsubst $(SRC_DIR)/%,$(BUILD_DIR)/%,$(SOURCES:.$(SRC_EXT)=.o))
+SRC_EXT     := .c
+SOURCES     := $(shell find $(SRC_DIR) -type f -name *$(SRC_EXT))
+OBJECTS     := $(patsubst $(SRC_DIR)/%,$(BUILD_DIR)/%,$(SOURCES:$(SRC_EXT)=.o))
 
 
 .PHONY: all
@@ -25,7 +25,7 @@ all: setup $(TARGET)
 $(TARGET): $(OBJECTS)
 	$(CC) $^ -o $(TARGET)
 
-$(BUILD_DIR)/%.o: $(SRC_DIR)/%.$(SRC_EXT)
+$(BUILD_DIR)/%.o: $(SRC_DIR)/%$(SRC_EXT)
 	@mkdir -p $(dir $@)
 	$(CC) $(CFLAGS) $(INC) -c -o $@ $<
 
