@@ -75,7 +75,7 @@ void compile(char const * source_path) {
         } else {
             printf("   | ");
         }
-        if (token.type == AVL_NEWLINE || token.type == AVL_DEDENT || token.type == AVL_INDENT)
+        if (token.type == AVL_NEWLINE || token.type == AVL_DEDENT || token.type == AVL_INDENT || token.type == AVL_NO_INDENT)
             printf("%-20s ''\n", tokenTypeToString(token.type));
         else
             printf("%-20s '%.*s'\n", tokenTypeToString(token.type), (int) token.length, token.start);
