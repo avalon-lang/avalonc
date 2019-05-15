@@ -51,8 +51,8 @@ struct SizeTStack * newSizeTStack(size_t size, char const * message);
  *
  * @param       stack pointer to memory occupied by the stack.
  */
-void deleteStack(struct Stack ** stack);
-void deleteSizeTStack(struct SizeTStack ** stack);
+void deleteStack(struct Stack ** const stack);
+void deleteSizeTStack(struct SizeTStack ** const stack);
 
 
 /**
