@@ -29,7 +29,7 @@
  *
  * @return      the newly created stack.
  */
-struct Stack * newStack(size_t initial_size, char const * error_message) {
+struct Stack * newStack(size_t initial_size, char const * message) {
     if(initial_size == 0)
         goto exit;
 
@@ -42,16 +42,16 @@ struct Stack * newStack(size_t initial_size, char const * error_message) {
         goto exit;
     stack -> size = initial_size;
     stack -> top = 0;
-    stack -> message = error_message;
+    stack -> message = message;
 
     return stack;
 
 exit:
-    fprintf(stderr, "File: %s.\nLine: %d.\nOperation: newStack.\nMessage: %s\n", __FILE__, __LINE__, stack -> message);
+    fprintf(stderr, "File: %s.\nLine: %d.\nOperation: newStack.\nMessage: %s\n", __FILE__, __LINE__, message);
     exit(74);
 }
 
-struct SizeTStack * newSizeTStack(size_t initial_size, char const * error_message) {
+struct SizeTStack * newSizeTStack(size_t initial_size, char const * message) {
     if(initial_size == 0)
         goto exit;
 
@@ -64,12 +64,12 @@ struct SizeTStack * newSizeTStack(size_t initial_size, char const * error_messag
         goto exit;
     stack -> size = initial_size;
     stack -> top = 0;
-    stack -> message = error_message;
+    stack -> message = message;
 
     return stack;
 
 exit:
-    fprintf(stderr, "File: %s.\nLine: %d.\nOperation: newSizeTStack.\nMessage: %s\n", __FILE__, __LINE__, stack -> message);
+    fprintf(stderr, "File: %s.\nLine: %d.\nOperation: newSizeTStack.\nMessage: %s\n", __FILE__, __LINE__, message);
     exit(74);
 }
 
@@ -112,25 +112,26 @@ void deleteSizeTStack(struct SizeTStack ** const stack) {
  * @return      true if the stack is empty, false otherwise.
  */
 bool isStackEmpty(struct Stack const * const stack) {
+    char const * message = "The parameter <stack> cannot be NULL.";
     if (stack == NULL)
         goto exit;
 
     return stack -> top == 0;
 
 exit:
-    fprintf(stderr, "File: %s.\nLine: %d.\nOperation: isStackEmpty.\nMessage: %s\n", __FILE__, __LINE__, stack -> message);
+    fprintf(stderr, "File: %s.\nLine: %d.\nOperation: isStackEmpty.\nMessage: %s\n", __FILE__, __LINE__, stack ? stack -> message : message);
     exit(74);
 }
 
 bool isSizeTStackEmpty(struct SizeTStack const * const stack) {
+    char const * message = "The parameter <stack> cannot be NULL.";
     if (stack == NULL)
         goto exit;
-
 
     return stack -> top == 0;
 
 exit:
-    fprintf(stderr, "File: %s.\nLine: %d.\nOperation: isSizeTStackEmpty.\nMessage: %s\n", __FILE__, __LINE__, stack -> message);
+    fprintf(stderr, "File: %s.\nLine: %d.\nOperation: isSizeTStackEmpty.\nMessage: %s\n", __FILE__, __LINE__, stack ? stack -> message : message);
     exit(74);
 }
 
@@ -143,24 +144,26 @@ exit:
  * @return      the element at the top of the stack.
  */
 void * stackTop(struct Stack const * const stack) {
+    char const * message = "The parameter <stack> cannot be NULL.";
     if (stack == NULL)
         goto exit;
 
     return stack -> elements[stack -> top];
 
 exit:
-    fprintf(stderr, "File: %s.\nLine: %d.\nOperation: stackTop.\nMessage: %s\n", __FILE__, __LINE__, stack -> message);
+    fprintf(stderr, "File: %s.\nLine: %d.\nOperation: stackTop.\nMessage: %s\n", __FILE__, __LINE__, stack ? stack -> message : message);
     exit(74);
 }
 
 size_t sizeTStackTop(struct SizeTStack const * const stack) {
+    char const * message = "The parameter <stack> cannot be NULL.";
     if (stack == NULL)
         goto exit;
 
     return stack -> elements[stack -> top];
 
 exit:
-    fprintf(stderr, "File: %s.\nLine: %d.\nOperation: sizeTStackTop.\nMessage: %s\n", __FILE__, __LINE__, stack -> message);
+    fprintf(stderr, "File: %s.\nLine: %d.\nOperation: sizeTStackTop.\nMessage: %s\n", __FILE__, __LINE__, stack ? stack -> message : message);
     exit(74);
 }
 
@@ -172,6 +175,7 @@ exit:
  * @param       element pointer to the element to push onto the stack.
  */
 void stackPush(struct Stack * const stack, void * element) {
+    char const * message = "The parameter <stack> cannot be NULL.";
     if (stack == NULL)
         goto exit;
 
@@ -188,11 +192,12 @@ void stackPush(struct Stack * const stack, void * element) {
     stack -> elements[stack -> top++] = element;
 
 exit:
-    fprintf(stderr, "File: %s.\nLine: %d.\nOperation: stackPush.\nMessage: %s\n", __FILE__, __LINE__, stack -> message);
+    fprintf(stderr, "File: %s.\nLine: %d.\nOperation: stackPush.\nMessage: %s\n", __FILE__, __LINE__, stack ? stack -> message : message);
     exit(74);
 }
 
 void sizeTStackPush(struct SizeTStack * const stack, const size_t element) {
+    char const * message = "The parameter <stack> cannot be NULL.";
     if (stack == NULL)
         goto exit;
 
@@ -209,7 +214,7 @@ void sizeTStackPush(struct SizeTStack * const stack, const size_t element) {
     stack -> elements[stack -> top++] = element;
 
 exit:
-    fprintf(stderr, "File: %s.\nLine: %d.\nOperation: sizeTStackPush.\nMessage: %s\n", __FILE__, __LINE__, stack -> message);
+    fprintf(stderr, "File: %s.\nLine: %d.\nOperation: sizeTStackPush.\nMessage: %s\n", __FILE__, __LINE__, stack ? stack -> message : message);
     exit(74);
 }
 
@@ -223,6 +228,7 @@ exit:
  * @return      pointer to the element popped off the stack top.
  */
 void * stackPop(struct Stack * const stack) {
+    char const * message = "The parameter <stack> cannot be NULL.";
     if (stack == NULL)
         goto exit;
 
@@ -232,11 +238,12 @@ void * stackPop(struct Stack * const stack) {
     return stack -> elements[stack -> top--];
 
 exit:
-    fprintf(stderr, "File: %s.\nLine: %d.\nOperation: stackPop.\nMessage: %s\n", __FILE__, __LINE__, stack -> message);
+    fprintf(stderr, "File: %s.\nLine: %d.\nOperation: stackPop.\nMessage: %s\n", __FILE__, __LINE__, stack ? stack -> message : message);
     exit(74);
 }
 
 size_t sizeTStackPop(struct SizeTStack * const stack) {
+    char const * message = "The parameter <stack> cannot be NULL.";
     if (stack == NULL)
         goto exit;
 
@@ -246,6 +253,6 @@ size_t sizeTStackPop(struct SizeTStack * const stack) {
     return stack -> elements[stack -> top--];
 
 exit:
-    fprintf(stderr, "File: %s.\nLine: %d.\nOperation: sizeTStackPop.\nMessage: %s\n", __FILE__, __LINE__, stack -> message);
+    fprintf(stderr, "File: %s.\nLine: %d.\nOperation: sizeTStackPop.\nMessage: %s\n", __FILE__, __LINE__, stack ? stack -> message : message);
     exit(74);
 }

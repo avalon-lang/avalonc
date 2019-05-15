@@ -77,13 +77,14 @@ void deleteVector(struct Vector ** const vector) {
  * @return      true if the vector is empty, false otherwise.
  */
 bool isVectorEmpty(struct Vector const * const vector) {
+    char const * message = "The parameter <vector> cannot be NULL.";
     if (vector == NULL)
         goto exit;
 
     return vector -> size == 0;
 
 exit:
-    fprintf(stderr, "File: %s.\nLine: %d.\nOperation: isVectorEmpty.\nMessage: %s\n", __FILE__, __LINE__, vector -> message);
+    fprintf(stderr, "File: %s.\nLine: %d.\nOperation: isVectorEmpty.\nMessage: %s\n", __FILE__, __LINE__, vector ? vector -> message : message);
     exit(74);
 }
 
@@ -96,13 +97,14 @@ exit:
  * @return      the number of elements in the vector.
  */
 size_t vectorSize(struct Vector const * const vector) {
+    char const * message = "The parameter <vector> cannot be NULL.";
     if (vector == NULL)
         goto exit;
 
     return vector -> size;
 
 exit:
-    fprintf(stderr, "File: %s.\nLine: %d.\nOperation: vectorSize.\nMessage: %s\n", __FILE__, __LINE__, vector -> message);
+    fprintf(stderr, "File: %s.\nLine: %d.\nOperation: vectorSize.\nMessage: %s\n", __FILE__, __LINE__, vector ? vector -> message : message);
     exit(74);
 }
 
@@ -115,6 +117,7 @@ exit:
  * @param       new_capacity the new capacity of the vector after resizing.
  */
 void vectorResize(struct Vector * const vector, size_t new_capacity) {
+    char const * message = "The parameter <vector> cannot be NULL.";
     if (vector == NULL)
         goto exit;
 
@@ -135,7 +138,7 @@ void vectorResize(struct Vector * const vector, size_t new_capacity) {
     return;
 
 exit:
-    fprintf(stderr, "File: %s.\nLine: %d.\nOperation: vectorResize.\nMessage: %s\n", __FILE__, __LINE__, vector -> message);
+    fprintf(stderr, "File: %s.\nLine: %d.\nOperation: vectorResize.\nMessage: %s\n", __FILE__, __LINE__, vector ? vector -> message : message);
     exit(74);
 }
 
@@ -147,6 +150,7 @@ exit:
  * @param       element element to insert into the vector.
  */
 void vectorPushback(struct Vector * const vector, void * element) {
+    char const * message = "The parameter <vector> cannot be NULL.";
     if (vector == NULL)
         goto exit;
 
@@ -157,7 +161,7 @@ void vectorPushback(struct Vector * const vector, void * element) {
     return;
 
 exit:
-    fprintf(stderr, "File: %s.\nLine: %d.\nOperation: vectorPushback.\nMessage: %s\n", __FILE__, __LINE__, vector -> message);
+    fprintf(stderr, "File: %s.\nLine: %d.\nOperation: vectorPushback.\nMessage: %s\n", __FILE__, __LINE__, vector ? vector -> message : message);
     exit(74);
 }
 
@@ -171,6 +175,7 @@ exit:
  * @param       element element to insert into the vector.
  */
 void vectorInsert(struct Vector * const vector, size_t position, void * element) {
+    char const * message = "The parameter <vector> cannot be NULL.";
     if (vector == NULL)
         goto exit;
 
@@ -186,7 +191,7 @@ void vectorInsert(struct Vector * const vector, size_t position, void * element)
     return;
 
 exit:
-    fprintf(stderr, "File: %s.\nLine: %d.\nOperation: vectorInsert.\nMessage: %s\n", __FILE__, __LINE__, vector -> message);
+    fprintf(stderr, "File: %s.\nLine: %d.\nOperation: vectorInsert.\nMessage: %s\n", __FILE__, __LINE__, vector ? vector -> message : message);
     exit(74);
 }
 
@@ -201,6 +206,7 @@ exit:
  * @return      element that was found at the given position in the vector.
  */
 void * vectorAt(struct Vector const * const vector, size_t position) {
+    char const * message = "The parameter <vector> cannot be NULL.";
     if (vector == NULL)
         goto exit;
 
@@ -215,7 +221,7 @@ void * vectorAt(struct Vector const * const vector, size_t position) {
     return vector -> elements[position];
 
 exit:
-    fprintf(stderr, "File: %s.\nLine: %d.\nOperation: vectorAt.\nMessage: %s\n", __FILE__, __LINE__, vector -> message);
+    fprintf(stderr, "File: %s.\nLine: %d.\nOperation: vectorAt.\nMessage: %s\n", __FILE__, __LINE__, vector ? vector -> message : message);
     exit(74);
 }
 
@@ -231,6 +237,7 @@ exit:
  * @return      element that was found at the given position in the vector.
  */
 void * vectorErase(struct Vector * const vector, size_t position) {
+    char const * message = "The parameter <vector> cannot be NULL.";
     if (vector == NULL)
         goto exit;
 
@@ -254,7 +261,7 @@ void * vectorErase(struct Vector * const vector, size_t position) {
     return element;
 
 exit:
-    fprintf(stderr, "File: %s.\nLine: %d.\nOperation: vectorErase.\nMessage: %s\n", __FILE__, __LINE__, vector -> message);
+    fprintf(stderr, "File: %s.\nLine: %d.\nOperation: vectorErase.\nMessage: %s\n", __FILE__, __LINE__, vector ? vector -> message : message);
     exit(74);
 }
 
@@ -269,6 +276,7 @@ exit:
  * @return      the last element in the vector.
  */
 void * vectorPopback(struct Vector * const vector) {
+    char const * message = "The parameter <vector> cannot be NULL.";
     if (vector == NULL)
         goto exit;
 
@@ -282,7 +290,7 @@ void * vectorPopback(struct Vector * const vector) {
     return element;
 
 exit:
-    fprintf(stderr, "File: %s.\nLine: %d.\nOperation: vectorPopback.\nMessage: %s\n", __FILE__, __LINE__, vector -> message);
+    fprintf(stderr, "File: %s.\nLine: %d.\nOperation: vectorPopback.\nMessage: %s\n", __FILE__, __LINE__, vector ? vector -> message : message);
     exit(74);
 
 }
