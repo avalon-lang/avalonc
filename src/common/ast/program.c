@@ -97,7 +97,7 @@ void deepDeleteProgram(struct Program ** const program) {
  * @param       program the program which FQN to set.
  * @param       fqn the string rep
  */
-struct FQN * setFQN(struct Program * program, struct FQN * const new_fqn) {
+struct FQN * setFQN(struct Program * const program, struct FQN * const new_fqn) {
     char const * message = "The parameter <program> cannot be a null pointer";
     if (program == NULL)
         goto exit;
@@ -119,7 +119,7 @@ exit:
  *
  * @return      this program fully qualified name.
  */
-struct FQN * getFQN(struct Program * program) {
+struct FQN * getFQN(struct Program const * const program) {
     char const * message = "The parameter <program> cannot be a null pointer";
     if (program == NULL)
         goto exit;
