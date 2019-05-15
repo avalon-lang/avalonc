@@ -86,7 +86,13 @@ struct Lexer * newLexer(char const * file, char const * source) {
  *
  * @param       lexer pointer to pointer to the memory occupied by the lexer.
  */
-void deleteLexer(struct Lexer ** lexer) {
+void deleteLexer(struct Lexer ** const lexer) {
+    if (lexer == NULL)
+        return;
+
+    if (* lexer == NULL)
+        return;
+
     free(* lexer);
     * lexer = NULL;
 }
@@ -100,6 +106,11 @@ void deleteLexer(struct Lexer ** lexer) {
  * @return      dynamic array containing all the tokens that have been read.
  */
 struct Token lexToken(struct Lexer * const lexer) {
+    if (lexer == NULL) {
+        fprintf(stderr, "File: %s\n.Line: %d.\nOperation: lexToken.\nMessage: The lexer cannot be NULL.\n", __FILE__, __LINE__);
+        exit(74);
+    }
+
     // We take care to issue dedentations that match indentations inside declarations
     // This case is encountered when the number of whitespaces at the current line is less than the number of whitespaces the line before and the difference between those number of whitespaces is greater than the first indentation number of whitespace
     while (lexer -> dedentation_count > 0) {
@@ -150,6 +161,8 @@ struct Token lexToken(struct Lexer * const lexer) {
         // If we do have a new line after reading all the whitespace, we consume the new line and ask the lexer to lex anew
         else {
             advance(lexer);
+            lexer -> line++;
+            lexer -> column = 1;
             return lexToken(lexer);
         }
     }
@@ -271,11 +284,11 @@ struct Token lexToken(struct Lexer * const lexer) {
         }
 
         case '\t':
-            fprintf(stderr, "[Lexer bug] We reached a switch case that handles tabulations but these cases are to handled before getting the next non-whitespace character.\n");
+            fprintf(stderr, "[Lexer bug]:\nFile: %s.\nLine: %d.\nMessage: We reached a switch case that handles tabulations but these cases are to handled before getting the next non-whitespace character.\n", __FILE__, __LINE__);
             exit(74);
 
         case ' ':
-            fprintf(stderr, "[Lexer bug] We reached a switch case that handles blank spaces but these cases are to handled before getting the next non-whitespace character.\n");
+            fprintf(stderr, "[Lexer bug]:\nFile: %s.\nLine: %d.\nMessage: We reached a switch case that handles blank spaces but these cases are to handled before getting the next non-whitespace character.\n", __FILE__, __LINE__);
             exit(74);
 
         default:
@@ -407,7 +420,7 @@ static struct Token number(struct Lexer * const lexer) {
 
     // This line exists here because the compiler is warning me that control reaches the end of a non-void function without a return statement but I'm sure all paths are accounted for.
     // I anticipate the C compiler does its termination analysis conservatively but I can't help wonder why I'm being warned about this.
-    fprintf(stderr, "[Lexer bug] We finished lexing a number but missed a case.\n");
+    fprintf(stderr, "[Lexer bug]:\nFile: %s.\nLine: %d.\nMessage: We finished lexing a number but missed a case.\n", __FILE__, __LINE__);
     exit(74);
 }
 
@@ -861,8 +874,10 @@ static void skipMultiComment(struct Lexer * const lexer) {
         advance(lexer);
     }
 
-    if (isAtEnd(lexer) && terminated == false)
+    if (isAtEnd(lexer) && terminated == false) {
         fprintf(stderr, "Unterminated multi line comment starting at line %zu.\n", line);
+        exit(74);
+    }
 
     // we consume the newline since comments may appear at the beginning of a source
     if (peek(lexer) == '\n' && isAtEnd(lexer) == false) {
