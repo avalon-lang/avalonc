@@ -3,7 +3,7 @@
 [![License](https://img.shields.io/badge/LICENSE-Apache%202.0-blue.svg?style=for-the-badge)](https://www.apache.org/licenses/LICENSE-2.0)
 [![Unitary Fund](https://img.shields.io/badge/Supported%20by-Unitary%20Fund-brightgreen.svg?style=for-the-badge)](http://unitary.fund)
 
-This repository contains a rewrite of the Avalon programming language in C. I have abandoned development in C++ because I like the "simplicity" of C (compared to C++), which I am used to. I still plan on playing with the interpreter written in C++ as playground so not totally abandonned.
+This repository contains a rewrite of the Avalon programming language in C. I have abandoned development in C++ because I like the "simplicity" of C (compared to C++), which I am used to. I still plan on playing with the interpreter written in C++ as playground so not totally abandoned.
 
 ## Why a new programming language
 
